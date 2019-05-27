@@ -1,3 +1,6 @@
+# Licenced under the MIT Licence
+# Copyright 2019, Rob Thomas <xrobau@gmail.com>
+
 HUB = hub.docker.com/xrobau
 NAME = derp
 BUILD ?= 01
