@@ -14,16 +14,14 @@ RUN apt-get update && apt-get -y install gnupg && curl https://packages.blackfir
   pecl install memcached mongodb && \
   docker-php-ext-enable memcached mongodb && \
   docker-php-ext-install -j$(nproc) bcmath bz2 json mbstring pdo pdo_mysql xsl zip pcntl gd mysqli curl gettext hash posix readline simplexml zip && \
-  echo apt-get purge $(dpkg -l | awk '{ /-dev/ { print $2 } }') && \
-  echo rm -rf /var/lib/apt/lists/*
-
-RUN curl -L -O https://github.com/tideways/php-xhprof-extension/archive/v5.0-beta1.tar.gz && \
-        tar vxfz v5.0-beta1.tar.gz && cd php-xhprof-extension-5.0-beta1 && \
-        phpize && ./configure && make -j$(nproc) && make install && \
-        cd .. && rm -rf v5.0* php-xhprof* && \
-        echo "extension=tideways_xhprof.so" > /usr/local/etc/php/conf.d/xhprof.ini
-
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && apt-get install -y nodejs zip unzip
+  curl -L -O https://github.com/tideways/php-xhprof-extension/archive/v5.0-beta1.tar.gz && \
+  tar vxfz v5.0-beta1.tar.gz && cd php-xhprof-extension-5.0-beta1 && \
+  phpize && ./configure && make -j$(nproc) && make install && \
+  cd .. && rm -rf v5.0* php-xhprof* && \
+  echo "extension=tideways_xhprof.so" > /usr/local/etc/php/conf.d/xhprof.ini && \
+  curl -sL https://deb.nodesource.com/setup_12.x | bash - && apt-get install -y nodejs zip unzip && \
+  apt-get -y purge $(dpkg -l | awk '/lib.*-dev/ { print $2 }') && \
+  rm -rf /var/lib/apt/lists/*
 
 COPY blackfire.ini /root/.blackfire.ini
 COPY block-badfiles.conf /etc/apache2/conf-enabled/
