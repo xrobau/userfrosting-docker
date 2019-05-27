@@ -16,7 +16,7 @@ ENVVARS = -e DB_DRIVER=mysql -e DB_HOST=coredb -e DB_PORT=3306 -e DB_NAME=userfr
 COMPOSERVERSION=1.23.1
 WEBUSER=www-data
 
-# Pull UserFrosting from git
+# Pull UserFrosting from git and rebuild if the json changes
 PACKAGES := packages/userfrosting.tar.bz2
 
 # Note that 'make nuke' does a 'git checkout --force' of these repositories.
@@ -27,14 +27,18 @@ USERFROSTING_MOUNT = /var/www/
 
 SPRINKLES = core admin account
 
+SPRINKLES_DIRS = $(shell find sprinkles -type d | grep -v ' ')
+SPRINKLES_FILES = $(shell find sprinkles -type f -name '*')
+
 .PHONY: all build run watch shell stop stopall stop-database start-prereq docker-start-database \
-	load-passwords generate-passwords docker-compose link-packages fixperms
+	load-passwords generate-passwords docker-compose link-packages fixperms gensprinkles \
+	package-sprinkles
 
 export
 
 all: build run watch
 
-build: $(PACKAGES) link-packages git/userfrosting/app/sprinkles.json
+build: package-sprinkles $(PACKAGES) link-packages
 	docker build -t $(NAME):$(VERSION) --rm image
 
 run: start-prereq stop
@@ -55,14 +59,19 @@ git/userfrosting/build/node_modules: git/userfrosting/build/package.json
 git/userfrosting/app/assets/package.json:
 	docker exec -it -w /var/www/build $(NAME) npm run uf-assets-install
 
-sprinkles: git/userfrosting/app/sprinkles.json
-# Always recreate this
-.PHONY: git/userfrosting/app/sprinkles.json
-# TODO: Make this smart.
-git/userfrosting/app/sprinkles.json:
-	@echo '{ "require": { }, "base": [' > git/userfrosting/app/sprinkles.json
-	@for s in $(SPRINKLES) $(foreach s,$(wildcard sprinkles/*),$(notdir $(s))); do echo -n \"$$s\",; done | sed 's/,$$/\n/' >> git/userfrosting/app/sprinkles.json
-	@echo ']}' >> git/userfrosting/app/sprinkles.json
+gensprinkles: $(SPRINKLES_FILES) $(SPRINKLES_DIRS)
+	@echo '{ "require": { }, "base": [' > git/userfrosting/app/sprinkles.json.new
+	@for s in $(SPRINKLES) $(foreach s,$(wildcard sprinkles/*),$(notdir $(s))); do echo -n \"$$s\",; done | sed 's/,$$/\n/' >> git/userfrosting/app/sprinkles.json.new
+	@echo ']}' >> git/userfrosting/app/sprinkles.json.new
+	@[ ! -e git/userfrosting/app/sprinkles.json ] && cp git/userfrosting/app/sprinkles.json.new git/userfrosting/app/sprinkles.json || :
+	@cmp --silent git/userfrosting/app/sprinkles.json git/userfrosting/app/sprinkles.json.new || /bin/cp -f git/userfrosting/app/sprinkles.json.new git/userfrosting/app/sprinkles.json
+	@rm -f git/userfrosting/app/sprinkles.json.new
+
+package-sprinkles: gensprinkles packages/sprinkles.tar.bz2
+
+packages/sprinkles.tar.bz2: $(SPRINKLES_FILES) $(SPRINKLES_DIRS) 
+	rm -f packages/sprinkles.tar.bz2
+	cd sprinkles && tar -jcvf ../packages/sprinkles.tar.bz2 $(foreach s,$(wildcard sprinkles/*),$(notdir $(s)))
 
 fixperms: git/userfrosting/app/.env
 	@docker exec -it -w /var/www $(NAME) chown $(WEBUSER) app/logs app/cache app/sessions app/.env

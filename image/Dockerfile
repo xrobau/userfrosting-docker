@@ -40,5 +40,6 @@ COPY vimrc /etc/vim/vimrc
 WORKDIR /var/www
 
 ADD packages/userfrosting.tar.bz2 /var/www/
+ADD packages/sprinkles.tar.bz2 /var/www/app/sprinkles/
 
 
