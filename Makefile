@@ -8,7 +8,8 @@ VERSION := $(shell date +%Y%m%d).$(BUILD)
 SSHAGENT = -v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent
 PARAMS = --name=$(NAME) -p $(UFPORT):80 $(SSHAGENT) -e DEVMODE=true --network=uf_default $(MOUNTS) $(ENVVARS)
 
-MOUNTS = -v $(shell pwd)/git/userfrosting:/var/www -v $(shell pwd)/git/userfrosting/public:/var/www/html
+MOUNTS = -v $(shell pwd)/git/userfrosting:/var/www -v $(shell pwd)/git/userfrosting/public:/var/www/html $(SMOUNTS)
+SMOUNTS = $(foreach s,$(wildcard sprinkles/*),-v $(shell pwd)/$(s):/var/www/app/sprinkles/$(notdir $(s)))
 
 ENVVARS = -e DB_DRIVER=mysql -e DB_HOST=coredb -e DB_PORT=3306 -e DB_NAME=userfrosting -e DB_USER=userfrosting -e DB_PASSWORD=$(MYSQLUSERPASSWORD)
 
@@ -24,6 +25,7 @@ USERFROSTING_REPO = git@github.com:userfrosting/UserFrosting.git
 USERFROSTING_BRANCH = origin/master
 USERFROSTING_MOUNT = /var/www/
 
+SPRINKLES = core admin account
 
 .PHONY: all build run watch shell stop stopall stop-database start-prereq docker-start-database \
 	load-passwords generate-passwords docker-compose link-packages fixperms
@@ -53,11 +55,14 @@ git/userfrosting/build/node_modules: git/userfrosting/build/package.json
 git/userfrosting/app/assets/package.json:
 	docker exec -it -w /var/www/build $(NAME) npm run uf-assets-install
 
+sprinkles: git/userfrosting/app/sprinkles.json
 # Always recreate this
 .PHONY: git/userfrosting/app/sprinkles.json
 # TODO: Make this smart.
 git/userfrosting/app/sprinkles.json:
-	@/bin/cp -f git/userfrosting/app/sprinkles.example.json git/userfrosting/app/sprinkles.json
+	@echo '{ "require": { }, "base": [' > git/userfrosting/app/sprinkles.json
+	@for s in $(SPRINKLES) $(foreach s,$(wildcard sprinkles/*),$(notdir $(s))); do echo -n \"$$s\",; done | sed 's/,$$/\n/' >> git/userfrosting/app/sprinkles.json
+	@echo ']}' >> git/userfrosting/app/sprinkles.json
 
 fixperms: git/userfrosting/app/.env
 	@docker exec -it -w /var/www $(NAME) chown $(WEBUSER) app/logs app/cache app/sessions app/.env
