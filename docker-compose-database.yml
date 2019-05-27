@@ -8,6 +8,8 @@ services:
       MYSQL_PASSWORD: $MYSQLUSERPASSWORD
       MYSQL_USER: "userfrosting"
       MYSQL_DATABASE: "userfrosting"
+    volumes:
+      - $PWD/default.sql:/docker-entrypoint-initdb.d/default.sql
 
 
 
