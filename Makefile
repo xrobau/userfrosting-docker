@@ -36,7 +36,7 @@ SPRINKLES_FILES = $(shell find sprinkles -type f -name '*')
 
 export
 
-all: build run watch
+all: $(PACKAGES) build run watch
 
 build: package-sprinkles $(PACKAGES) link-packages
 	docker build -t $(NAME):$(VERSION) --rm image
