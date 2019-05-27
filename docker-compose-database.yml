@@ -1,0 +1,14 @@
+version: '3.6'
+
+services:
+  coredb:
+    image: mariadb:10.3-bionic
+    environment:
+      MYSQL_ROOT_PASSWORD: $MYSQLROOTPASSWORD
+      MYSQL_USER: userfrosting
+      MYSQL_PASSWORD: $MYSQLUSERPASSWORD
+
+
+
+
+
