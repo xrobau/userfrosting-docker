@@ -5,8 +5,9 @@ services:
     image: mariadb:10.3-bionic
     environment:
       MYSQL_ROOT_PASSWORD: $MYSQLROOTPASSWORD
-      MYSQL_USER: userfrosting
       MYSQL_PASSWORD: $MYSQLUSERPASSWORD
+      MYSQL_USER: "userfrosting"
+      MYSQL_DATABASE: "userfrosting"
 
 
 

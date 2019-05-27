@@ -1,13 +1,19 @@
 HUB = hub.docker.com/xrobau
 NAME = derp
 BUILD ?= 01
-UFPORT = 8086
+UFPORT ?= 8086
 
 VERSION := $(shell date +%Y%m%d).$(BUILD)
 
-PARAMS = --name=$(NAME) -p $(UFPORT):80 $(SSHAGENT) -e DEVMODE=true --network=uf_default -v $(shell pwd)/git/userfrosting:/var/www
+SSHAGENT = -v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent
+PARAMS = --name=$(NAME) -p $(UFPORT):80 $(SSHAGENT) -e DEVMODE=true --network=uf_default $(MOUNTS) $(ENVVARS)
+
+MOUNTS = -v $(shell pwd)/git/userfrosting:/var/www -v $(shell pwd)/git/userfrosting/public:/var/www/html
+
+ENVVARS = -e DB_DRIVER=mysql -e DB_HOST=coredb -e DB_PORT=3306 -e DB_NAME=userfrosting -e DB_USER=userfrosting -e DB_PASSWORD=$(MYSQLUSERPASSWORD)
 
 COMPOSERVERSION=1.23.1
+WEBUSER=www-data
 
 # Pull UserFrosting from git
 PACKAGES := packages/userfrosting.tar.bz2
@@ -18,26 +24,55 @@ USERFROSTING_REPO = git@github.com:userfrosting/UserFrosting.git
 USERFROSTING_BRANCH = origin/master
 USERFROSTING_MOUNT = /var/www/
 
-.PHONY: build run stop start-prereq docker-start-database generate-passwords docker-compose link-packages
+
+.PHONY: all build run watch shell stop stopall stop-database start-prereq docker-start-database \
+	load-passwords generate-passwords docker-compose link-packages fixperms
 
 export
 
 all: build run watch
 
-build: $(PACKAGES) link-packages
+build: $(PACKAGES) link-packages git/userfrosting/app/sprinkles.json
 	docker build -t $(NAME):$(VERSION) --rm image
 
 run: start-prereq stop
 	docker run -it -d $(PARAMS) $(NAME):$(VERSION)
 
-watch:
+watch: git/userfrosting/app/vendor/autoload.php git/userfrosting/build/node_modules fixperms
 	docker logs -f $(NAME)
+
+# We do an 'update' here, because there's some incompatible .lock files that
+# cause confusion inside composer. I didn't look where.
+git/userfrosting/app/vendor/autoload.php:
+	docker exec -it -w /var/www $(NAME) composer update
+
+# We tag the package.json as a dep, so if it's updated we'll rebuild the mode modules
+git/userfrosting/build/node_modules: git/userfrosting/build/package.json
+	docker exec -it -w /var/www/build $(NAME) npm install
+
+git/userfrosting/app/assets/package.json:
+	docker exec -it -w /var/www/build $(NAME) npm run uf-assets-install
+
+# Always recreate this
+.PHONY: git/userfrosting/app/sprinkles.json
+# TODO: Make this smart.
+git/userfrosting/app/sprinkles.json:
+	@/bin/cp -f git/userfrosting/app/sprinkles.example.json git/userfrosting/app/sprinkles.json
+
+fixperms: git/userfrosting/app/.env
+	@docker exec -it -w /var/www $(NAME) chown $(WEBUSER) app/logs app/cache app/sessions app/.env
+
+git/userfrosting/app/.env:
+	@touch git/userfrosting/app/.env
+	docker exec -it -w /var/www $(NAME) php bakery bake
 
 shell:
 	docker exec -it $(NAME) bash
 
 stop:
 	@docker rm -f $(NAME) 2>/dev/null || :
+
+stopall: stop-database stop
 
 stop-database: load-passwords
 	@/usr/bin/docker-compose -f docker-compose-database.yml -p uf rm -fsv 

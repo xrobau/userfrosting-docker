@@ -23,6 +23,8 @@ RUN curl -L -O https://github.com/tideways/php-xhprof-extension/archive/v5.0-bet
         cd .. && rm -rf v5.0* php-xhprof* && \
         echo "extension=tideways_xhprof.so" > /usr/local/etc/php/conf.d/xhprof.ini
 
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && apt-get install -y nodejs zip unzip
+
 COPY blackfire.ini /root/.blackfire.ini
 COPY block-badfiles.conf /etc/apache2/conf-enabled/
 
@@ -35,6 +37,7 @@ RUN a2enmod rewrite
 # Debugging assistance inside container. Remove later.
 RUN git clone https://github.com/xrobau/vim /root/.vim
 COPY vimrc /etc/vim/vimrc
+WORKDIR /var/www
 
 ADD packages/userfrosting.tar.bz2 /var/www/
 
