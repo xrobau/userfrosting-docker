@@ -63,7 +63,6 @@ fixperms: git/userfrosting/app/.env
 	@docker exec -it -w /var/www $(NAME) chown $(WEBUSER) app/logs app/cache app/sessions app/.env
 
 git/userfrosting/app/.env:
-	@touch git/userfrosting/app/.env
 	docker exec -it -w /var/www $(NAME) php bakery bake
 
 shell:
