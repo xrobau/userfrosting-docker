@@ -39,6 +39,11 @@ SPRINKLES_FILES = $(shell find sprinkles -type f -name '*')
 
 export
 
+UL = $(shell tput smul)
+ENDUL = $(shell tput rmul)
+SO = $(shell tput smso)
+ENDSO = $(shell tput rmso)
+
 all: $(PACKAGES) build run watch
 
 build: package-sprinkles $(PACKAGES) link-packages
@@ -84,6 +89,9 @@ git/userfrosting/app/.env:
 
 shell:
 	docker exec -it $(NAME) bash
+
+mysql: load-passwords
+	docker exec -it $(NAME) mysql -hcoredb -uuserfrosting -p$(MYSQLUSERPASSWORD) userfrosting
 
 stop:
 	@docker rm -f $(NAME) 2>/dev/null || :
