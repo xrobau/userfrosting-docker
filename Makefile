@@ -18,6 +18,13 @@ ENVVARS = -e DB_DRIVER=mysql -e DB_HOST=coredb -e DB_PORT=3306 -e DB_NAME=userfr
 
 COMPOSERVERSION=1.23.1
 WEBUSER=www-data
+UNAME_S = $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+   TARCMD=$(shell which tar)
+endif
+ifeq ($(UNAME_S),Darwin)
+  TARCMD=$(shell which gtar)
+endif
 
 # Pull UserFrosting from git and rebuild if the json changes
 PACKAGES := packages/userfrosting.tar.bz2
@@ -79,7 +86,7 @@ package-sprinkles: gensprinkles packages/sprinkles.tar.bz2
 
 packages/sprinkles.tar.bz2: $(SPRINKLES_FILES) $(SPRINKLES_DIRS) 
 	rm -f packages/sprinkles.tar.bz2
-	cd sprinkles && tar -jcvf ../packages/sprinkles.tar.bz2 $(foreach s,$(wildcard sprinkles/*),$(notdir $(s)))
+	cd sprinkles && $(TARCMD) -jcvf ../packages/sprinkles.tar.bz2 $(foreach s,$(wildcard sprinkles/*),$(notdir $(s)))
 
 fixperms: git/userfrosting/app/.env
 	@docker exec -it -w /var/www $(NAME) chown $(WEBUSER) app/logs app/cache app/sessions app/.env
@@ -133,7 +140,7 @@ link-packages:
 
 packages/%.tar.bz2: git/%/_GIT_UPDATE_
 	mkdir -p packages
-	cd git/$(*F) && tar --mtime="2019-01-01 01:01:01" --owner=0 --group=0 --numeric-owner --exclude-vcs --exclude='*.tgz' --exclude='node_modules' -jcf ../../$@ .
+	cd git/$(*F) && $(TARCMD) --mtime="2019-01-01 01:01:01" --owner=0 --group=0 --numeric-owner --exclude-vcs --exclude='*.tgz' --exclude='node_modules' -jcf ../../$@ .
 
 git/%/_GIT_UPDATE_: git/%/.git
 	$(eval BRANCH = $($(shell echo $(*F) | tr '[:lower:]' '[:upper:]')_BRANCH))
