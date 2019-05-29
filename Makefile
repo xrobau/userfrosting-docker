@@ -12,7 +12,7 @@ SMTP_PASSWORD ?= password
 
 VERSION := $(shell date +%Y%m%d).$(BUILD)
 
-SSHAGENT = -v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent
+SSHAGENT = -v $(shell [ -e /usr/bin/readlink ] && /usr/bin/readlink -f ${SSH_AUTH_SOCK} || echo /dev/null):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent
 PARAMS = --name=$(NAME) -p $(UFPORT):80 $(SSHAGENT) -e DEVMODE=true --network=uf_default $(MOUNTS) $(ENVVARS)
 
 MOUNTS = -v $(shell pwd)/git/userfrosting:/var/www -v $(shell pwd)/git/userfrosting/public:/var/www/html $(SMOUNTS) $(COMPOSERMOUNT)
@@ -36,7 +36,9 @@ endif
 # Pull UserFrosting from git and rebuild if the json changes
 PACKAGES := packages/userfrosting.tar.bz2
 
-USERFROSTING_REPO = git@github.com:userfrosting/UserFrosting.git
+# If you have a valid SSH key, use ssh instead of https
+#USERFROSTING_REPO = git@github.com:userfrosting/UserFrosting.git
+USERFROSTING_REPO = https://github.com/userfrosting/UserFrosting.git
 USERFROSTING_BRANCH = origin/master
 USERFROSTING_MOUNT = /var/www/
 
