@@ -34,7 +34,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 # Pull UserFrosting from git and rebuild if the json changes
-PACKAGES := packages/userfrosting.tar.bz2
+PACKAGES := packages/userfrosting.tar.bz2 packages/node_modules.tar.bz2
 
 # If you have a valid SSH key, use ssh instead of https
 #USERFROSTING_REPO = git@github.com:userfrosting/UserFrosting.git
@@ -106,6 +106,9 @@ packages/sprinkles.tar.bz2: $(TAR) $(SPRINKLES_FILES) $(SPRINKLES_DIRS)
 		docker run -it --rm -w /var/www/app $(MOUNTS) php:7.3.5-apache-stretch find sprinkles/$$s -name '*.php' -exec php -l {} \;;  done
 	@rm -f packages/sprinkles.tar.bz2
 	@cd sprinkles && $(TAR) -jcf ../packages/sprinkles.tar.bz2 $(foreach s,$(wildcard sprinkles/*),$(notdir $(s)))
+
+packages/node_modules.tar.bz2: $(TAR) git/userfrosting/build/node_modules 
+	cd git/userfrosting && $(TAR) --mtime="2019-01-01 01:01:01" --owner=0 --group=0 --numeric-owner --exclude-vcs --exclude='*.tgz' -jcf ../../$@ build/node_modules app/assets/node_modules
 
 fixperms:
 	@[ ! -e git/userfrosting/app/.env ] && echo -e 'SMTP_HOST=$(SMTP_HOST)\nSMTP_USER=$(SMTP_USER)\nSMTP_PASSWORD=$(SMTP_PASSWORD)\n' > git/userfrosting/app/.env || :

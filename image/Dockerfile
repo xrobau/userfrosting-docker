@@ -25,6 +25,7 @@ RUN apt-get update && apt-get -y install gnupg && curl https://packages.blackfir
 
 COPY blackfire.ini /root/.blackfire.ini
 COPY block-badfiles.conf /etc/apache2/conf-enabled/
+COPY 000-default.conf /etc/apache2/sites-enabled
 
 # Composer
 RUN curl https://getcomposer.org/installer | php -- --filename='composer' --install-dir='/usr/bin'
